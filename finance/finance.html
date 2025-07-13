@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Future Savings Predictor</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Roboto', Arial, sans-serif; margin: 30px; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; margin-bottom: 4px; }
+    input[type="number"], input[type="date"] { width: 120px; }
+    fieldset { margin-bottom: 16px; }
+    legend { font-weight: bold; }
+    .results { margin-top: 24px; }
+    #chart-container { width: 100%; max-width: 700px; margin-top: 24px; }
+    button { padding: 6px 18px; font-size: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Future Savings Predictor</h1>
+  <form id="predictForm">
+    <div class="form-group">
+      <label>Net Salary (EUR): <input type="number" id="salary" value="1400" min="0" required></label>
+    </div>
+    <div class="form-group">
+      <label>Monthly investment to stocks/property (EUR): <input type="number" id="monthlyInvestment" value="100" min="0"></label>
+    </div>
+    <div class="form-group">
+      <label>Current Savings (Bank, EUR): <input type="number" id="bank" value="5000" min="0"></label>
+    </div>
+    <div class="form-group">
+      <label>Current Savings (Stocks/Property, EUR): <input type="number" id="etoro" value="2000" min="0"></label>
+    </div>
+    <div class="form-group">
+      <label>Property/Stocks Interest Rate (% per year): <input type="number" id="etoroInterest" value="10" min="0"></label>
+    </div>
+    <div class="form-group">
+      <label>Salary Growth (% per year): <input type="number" id="salaryGrowth" value="4" min="0"></label>
+    </div>
+    <div class="form-group">
+      <label>Inflation (% per year): <input type="number" id="inflation" value="2" min="0"></label>
+    </div>
+    <fieldset>
+      <legend>Monthly Spending</legend>
+      <label>Apartment: <input type="number" id="spendApartment" value="400" min="0"></label>
+      <label>Apartment costs: <input type="number" id="spendApartmentCosts" value="120" min="0"></label>
+      <label>Food & Drinks: <input type="number" id="spendFood" value="350" min="0"></label>
+      <label>Travel: <input type="number" id="spendTravel" value="40" min="0"></label>
+      <label>Accessories: <input type="number" id="spendAccessories" value="30" min="0"></label>
+      <label>Social life: <input type="number" id="spendSocial" value="120" min="0"></label>
+      <label>Wifi: <input type="number" id="spendWifi" value="30" min="0"></label>
+      <label>Misc: <input type="number" id="spendMisc" value="60" min="0"></label>
+    </fieldset>
+    <div class="form-group">
+      <label>Target Date: <input type="date" id="targetDate" required></label>
+    </div>
+    <button type="submit">Predict</button>
+  </form>
+  <div class="results" id="results"></div>
+  <div id="chart-container">
+    <canvas id="savingsChart"></canvas>
+  </div>
+  <script>
+    // Set default target date to 1 year from now
+    document.getElementById('targetDate').value = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0];
+
+    function getSpending() {
+      return (
+        Number(document.getElementById('spendApartment').value) +
+        Number(document.getElementById('spendApartmentCosts').value) +
+        Number(document.getElementById('spendFood').value) +
+        Number(document.getElementById('spendTravel').value) +
+        Number(document.getElementById('spendAccessories').value) +
+        Number(document.getElementById('spendSocial').value) +
+        Number(document.getElementById('spendWifi').value) +
+        Number(document.getElementById('spendMisc').value)
+      );
+    }
+
+    function monthsBetween(date1, date2) {
+      return (date2.getFullYear() - date1.getFullYear()) * 12 + (date2.getMonth() - date1.getMonth());
+    }
+
+    function formatEUR(n) {
+      return n.toLocaleString('en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+    }
+
+    document.getElementById('predictForm').onsubmit = function(e) {
+      e.preventDefault();
+
+      // Inputs
+      let salary = Number(document.getElementById('salary').value);
+      let monthlyInvestment = Number(document.getElementById('monthlyInvestment').value);
+      let bank = Number(document.getElementById('bank').value);
+      let etoro = Number(document.getElementById('etoro').value);
+      let etoroInterest = Number(document.getElementById('etoroInterest').value) / 100;
+      let salaryGrowth = Number(document.getElementById('salaryGrowth').value) / 100;
+      let inflation = Number(document.getElementById('inflation').value) / 100;
+      let monthlySpending = getSpending();
+      let targetDate = new Date(document.getElementById('targetDate').value);
+
+      console.log("Salary:", salary);
+      console.log("Monthly Investment:", monthlyInvestment);
+      console.log("Bank:", bank);
+      console.log("Etoro:", etoro);
+      console.log("Etoro Interest:", etoroInterest);
+      console.log("Salary Growth:", salaryGrowth);
+      console.log("Inflation:", inflation);
+      console.log("Monthly Spending:", monthlySpending);
+      console.log("Target Date:", targetDate);
+
+      // Dates
+      let now = new Date();
+      let months = monthsBetween(now, targetDate);
+      let jan1 = new Date(now.getFullYear() + 1, 0, 1);
+      let fiveYears = new Date(now.getFullYear() + 5, now.getMonth(), 1);
+
+      // Monthly rates
+      let monthlyEtoroInterest = Math.pow(1 + etoroInterest, 1 / 12) - 1;
+      let monthlySalaryGrowth = Math.pow(1 + salaryGrowth, 1 / 12) - 1;
+      let monthlyInflation = Math.pow(1 + inflation, 1 / 12) - 1;
+
+      // Simulation for chart (up to target date)
+      let chartLabels = [];
+      let chartData = [];
+      let chartBank = bank;
+      let chartEtoro = etoro;
+      let chartSalary = salary;
+      for (let i = 0; i <= months; i++) {
+        let date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        chartLabels.push(date.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' }));
+        chartData.push(Number((chartBank + chartEtoro).toFixed(2)));
+        // Add investment to etoro
+        if (chartSalary >= monthlyInvestment) {
+          chartEtoro += monthlyInvestment;
+          chartBank = chartBank + chartSalary - monthlyInvestment - (monthlySpending * Math.pow(1 + monthlyInflation, i));
+        } else {
+          chartBank = chartBank + chartSalary - (monthlySpending * Math.pow(1 + monthlyInflation, i));
+        }
+        // Apply E-toro interest, adjusted for inflation
+        chartEtoro = chartEtoro * (1 + monthlyEtoroInterest - monthlyInflation);
+        // Increase salary for next month
+        chartSalary = chartSalary * (1 + monthlySalaryGrowth - monthlyInflation);
+      }
+
+      // Simulation for numbers (up to 5 years)
+      let bank5 = bank, etoro5 = etoro, salary5 = salary;
+      let savingsAtJan1 = null, savingsAt5Years = null, savingsAtTarget = null;
+      let months5 = monthsBetween(now, fiveYears);
+      let monthsJan1 = monthsBetween(now, jan1);
+      for (let i = 0; i <= Math.max(months, months5); i++) {
+        if (i === monthsJan1) savingsAtJan1 = bank5 + etoro5;
+        if (i === months) savingsAtTarget = bank5 + etoro5;
+        if (i === months5) savingsAt5Years = bank5 + etoro5;
+        // Add investment to etoro
+        if (salary5 >= monthlyInvestment) {
+          etoro5 += monthlyInvestment;
+          bank5 = bank5 + salary5 - monthlyInvestment - (monthlySpending * Math.pow(1 + monthlyInflation, i));
+        } else {
+          bank5 = bank5 + salary5 - (monthlySpending * Math.pow(1 + monthlyInflation, i));
+        }
+        // Apply E-toro interest, adjusted for inflation
+        etoro5 = etoro5 * (1 + monthlyEtoroInterest - monthlyInflation);
+        // Increase salary for next month
+        salary5 = salary5 * (1 + monthlySalaryGrowth - monthlyInflation);
+      }
+
+      // Results
+      document.getElementById('results').innerHTML = `
+        <b>Predicted savings:</b><br>
+        On target date (${targetDate.toLocaleDateString()}): <b>${formatEUR(savingsAtTarget || 0)}</b><br>
+        In one year (${jan1.toLocaleDateString()}): <b>${formatEUR(savingsAtJan1 || 0)}</b><br>
+        In five years (${fiveYears.toLocaleDateString()}): <b>${formatEUR(savingsAt5Years || 0)}</b>
+      `;
+
+      // Chart
+      if (window.savingsChart) window.savingsChart.destroy();
+      window.savingsChart = new Chart(document.getElementById('savingsChart').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: chartLabels,
+          datasets: [{
+            label: 'Predicted Savings',
+            data: chartData,
+            borderColor: '#FFB6C1',
+            backgroundColor: 'rgba(255,182,193,0.2)',
+            fill: true,
+            pointBackgroundColor: '#FFB6C1',
+            pointBorderColor: '#FFB6C1',
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: true, labels: { font: { family: 'Roboto' } } },
+            title: {
+              display: true,
+              text: 'Predicted Net Valuation Over Time',
+              font: { size: 18, family: 'Roboto' },
+            },
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Date', font: { family: 'Roboto' } },
+            },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Savings (EUR)', font: { family: 'Roboto' } },
+            },
+          },
+        }
+      });
+    };
+
+    // Auto-run on load
+    window.onload = () => document.getElementById('predictForm').dispatchEvent(new Event('submit'));
+  </script>
+</body>
+</html>

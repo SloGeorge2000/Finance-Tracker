@@ -1,0 +1,45 @@
+{
+  "name": "finance-tracker",
+  "homepage": "https://novaenergija.si/finance_app/",
+  "version": "1.0.0",
+  "description": "A web application to track and project personal finances.",
+  "main": "src/index.tsx",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "dependencies": {
+    "chart.js": "^3.6.0",
+    "react": "^17.0.2",
+    "react-chartjs-2": "^3.0.4",
+    "react-dom": "^17.0.2",
+    "react-scripts": "4.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.34",
+    "@types/react-dom": "^17.0.9",
+    "typescript": "^4.4.3"
+  },
+  "keywords": [
+    "finance",
+    "tracker",
+    "personal finance",
+    "budgeting"
+  ],
+  "author": "Jure Vitulic",
+  "license": "MIT",
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
